@@ -4,35 +4,36 @@
 ### 📋 Project Overview
 A machine learning system for Bati Bank that predicts customer creditworthiness using e-commerce transaction data. The model enables risk-based decisions for the new BNPL service by transforming behavioral patterns into predictive risk signals.
 
-### 🎯 Business Context & Regulatory Compliance
+## Credit Scoring Business Understanding
 
-#### 1. Basel II Requirements & Model Transparency
-The Basel II Capital Accord mandates that financial institutions maintain capital reserves proportional to quantified credit risk. This requires:
-- **Transparent risk quantification** with explainable probability estimates
-- **Full model documentation** for regulatory validation and audit trails
-- **Stable performance** across economic conditions for capital calculation
+### 1. How Basel II Accord's Emphasis on Risk Measurement Influences Our Model
+The Basel II Capital Accord requires banks to maintain capital reserves proportional to their credit risk exposure. This mandates our model to be:
+- **Interpretable**: Regulators must understand prediction logic to validate capital calculations
+- **Well-documented**: Every feature transformation needs clear documentation for audit trails  
+- **Statistically validated**: Probability of Default (PD) estimates must withstand regulatory scrutiny
+- **Stable**: Consistent performance across economic scenarios for accurate capital allocation
 
-#### 2. Proxy Variable Justification
-**Challenge**: No direct default labels in e-commerce transaction data.
+### 2. Proxy Variable Necessity and Business Risks
+**Why necessary**: No direct "default" labels exist in e-commerce transaction data. We create a proxy using RFM (Recency, Frequency, Monetary) behavioral patterns as the closest indicator of creditworthiness.
 
-**Solution**: RFM (Recency, Frequency, Monetary) behavioral clustering creates a proxy for credit risk based on customer engagement patterns.
+**Business risks of proxy-based predictions**:
+- **Misalignment Risk**: Transactional disengagement ≠ actual credit default (25.55% outlier rate in Amount shows extreme value dispersion)
+- **False Classification**: Correlation analysis shows Amount-Value near-perfect correlation (0.99), but this may not indicate credit risk
+- **Validation Gap**: Cannot measure true accuracy without actual default data
+- **Regulatory Scrutiny**: Using unvalidated proxies may violate compliance requirements
 
-**Business Risk**: Transactional disengagement may not perfectly correlate with credit default, potentially causing:
-- **Type I Errors**: Rejecting creditworthy customers (lost revenue)
-- **Type II Errors**: Approving high-risk customers (credit losses)
-- **Proxy Misalignment**: Behavioral patterns ≠ financial reliability
+**Mitigation**: Conservative credit limits, phased deployment, and continuous monitoring of actual loan performance.
 
-**Mitigation**: Conservative risk thresholds, phased deployment with real-default tracking, and continuous model recalibration.
-
-#### 3. Model Selection: Regulatory vs Performance Trade-offs
-| Consideration | Logistic Regression | Gradient Boosting |
+### 3. Simple vs Complex Model Trade-offs in Regulated Finance
+| Consideration | Logistic Regression (Simple) | Gradient Boosting (Complex) |
 |--------------|-------------------|------------------|
 | **Interpretability** | High - Clear feature coefficients | Low - Black-box predictions |
-| **Regulatory Fit** | Strong - Easily validated | Challenging - Extensive documentation needed |
-| **Predictive Power** | Moderate - Linear assumptions | High - Captures complex patterns |
-| **Implementation** | Fast deployment, minimal compute | Slower, resource-intensive |
+| **Regulatory Fit** | Strong - Easily validated & documented | Challenging - Requires extensive justification |
+| **Accuracy Potential** | Moderate - May miss non-linear patterns | High - Captures complex relationships |
+| **Outlier Handling** | Sensitive to extreme values (25.55% outliers) | Robust to outliers through ensemble methods |
+| **Implementation Speed** | Fast deployment, minimal compute | Resource-intensive training |
 
-**Decision**: Deploy Logistic Regression initially for regulatory compliance, with Gradient Boosting as secondary validation.
+**Our Decision**: Start with **Logistic Regression** for regulatory compliance and interpretability, despite potential accuracy trade-off. The 0.557 correlation between FraudResult and Amount suggests fraud patterns are detectable with simpler models.
 
 ### 📊 Data Analysis & Methodology
 
@@ -45,6 +46,18 @@ The Basel II Capital Accord mandates that financial institutions maintain capita
 1. **Highly Skewed Engagement**: 50% of customers have ≤4 transactions; top 5% account for 48% of total activity
 2. **Fraud Patterns**: Rare (0.20%) but severe - average fraud transaction ($1.53M) vs normal ($3,627)
 3. **Temporal Trends**: Peak activity at 7-9 AM; December highest volume (35,635 transactions)
+
+#### Correlation Analysis Findings
+- **Amount-Value Correlation**: 0.99 (near-perfect, as Value is absolute Amount)
+- **Fraud-Amount Correlation**: 0.557 (fraud transactions tend to be larger)
+- **CountryCode**: No correlations (all values = 256 for Uganda)
+- **Insight**: Monetary features strongly indicate fraudulent activity
+
+#### Outlier Detection Results
+- **Amount**: 25.55% outliers by IQR method, range up to $9.88M
+- **Value**: 9.43% outliers, extreme values indicate fraud cases
+- **PricingStrategy**: 16.53% outliers, values clustered (0, 2, 4)
+- **Business Implication**: Extreme transactions require separate risk assessment
 
 #### Feature Engineering Pipeline
 **RFM Metrics**:
@@ -90,16 +103,24 @@ Validation → MLflow Tracking → Registry → CI/CD Pipeline
 
 ### 📁 Project Structure
 credit-risk-model/
-├── data/ # Data storage
+├── data/ # Data storage (.gitignored)
+│ ├── raw/ # Original dataset
+│ └── processed/ # Processed data for training
 ├── notebooks/ # Exploratory analysis
+│ └── eda.ipynb # Task 2: Complete EDA with visualizations
 ├── src/ # Production code
-│ ├── data_processing.py # Feature engineering
-│ ├── target_engineering.py # Risk labeling
-│ ├── train.py # Model training
-│ └── api/ # Deployment API
+│ ├── data_processing.py # Task 3: Feature engineering
+│ ├── target_engineering.py # Task 4: Risk labeling
+│ ├── train.py # Task 5: Model training
+│ └── api/ # Task 6: Deployment
 ├── tests/ # Unit tests
 ├── models/ # Trained models
-└── .github/workflows/ # CI/CD automation
+├── .github/workflows/ # CI/CD pipeline (ci.yml)
+├── Dockerfile # Container configuration
+├── docker-compose.yml # Service orchestration
+├── requirements.txt # Python dependencies
+├── .gitignore # Excludes data/, caches, envs
+└── README.md # Project documentation
 
 ### 🚀 Getting Started
 
@@ -110,7 +131,7 @@ credit-risk-model/
 #### Installation
 ```bash
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/beza1619/credit-risk-model.git
 cd credit-risk-model
 
 # Install dependencies
@@ -142,6 +163,7 @@ Data Enrichment: Integrate browsing behavior, device signals, demographic indica
 Model Sophistication: Sequence-based models for temporal pattern recognition
 
 Fairness Assurance: Systematic bias detection across customer segments
+
 Production Monitoring: Real-time performance tracking and drift detection
 
 📚 References
