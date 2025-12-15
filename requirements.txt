@@ -9,7 +9,7 @@ notebook==6.5.4
 
 # Feature Engineering
 category-encoders==2.6.3
-xverse==0.2.0
+xverse==0.1.4
 
 # ML & MLOps
 mlflow==2.8.1
