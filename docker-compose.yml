@@ -1,19 +1,39 @@
-version: '3.8' 
- 
-services: 
-  api: 
-    build: . 
-    ports: 
-      - "8000:8000" 
-    volumes: 
-      - ./data:/app/data 
-    environment: 
-      - MLFLOW_TRACKING_URI=http://mlflow:5000 
- 
-  mlflow: 
-    image: ghcr.io/mlflow/mlflow:latest 
-    ports: 
-      - "5000:5000" 
-    volumes: 
-      - ./mlruns:/mlflow/mlruns 
-    command: mlflow server --host 0.0.0.0 --port 5000 
+version: '3.8'
+
+services:
+  credit-risk-api:
+    build: .
+    container_name: credit-risk-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - credit-risk-network
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow-tracking
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow.db
+      --default-artifact-root ./mlruns
+      --host 0.0.0.0
+    volumes:
+      - ./mlruns:/mlruns
+      - ./mlartifacts:/mlartifacts
+    networks:
+      - credit-risk-network
+
+networks:
+  credit-risk-network:
+    driver: bridge
