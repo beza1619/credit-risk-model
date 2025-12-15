@@ -7,12 +7,16 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import numpy as np
 
+
 class CustomerFeatures(BaseModel):
     """Input features for a customer"""
+
     transaction_count: float = Field(..., description="Number of transactions")
     total_amount: float = Field(..., description="Total transaction amount")
     avg_amount: float = Field(..., description="Average transaction amount")
-    std_amount: float = Field(..., description="Standard deviation of transaction amounts")
+    std_amount: float = Field(
+        ..., description="Standard deviation of transaction amounts"
+    )
     min_amount: float = Field(..., description="Minimum transaction amount")
     max_amount: float = Field(..., description="Maximum transaction amount")
     unique_transactions: float = Field(..., description="Number of unique transactions")
@@ -26,7 +30,7 @@ class CustomerFeatures(BaseModel):
     channel_diversity: float = Field(..., description="Number of transaction channels")
     amount_range: float = Field(..., description="Range of transaction amounts")
     monetary_per_day: float = Field(..., description="Monetary value per day")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -46,15 +50,17 @@ class CustomerFeatures(BaseModel):
                 "product_diversity": 2.11,
                 "channel_diversity": 1.76,
                 "amount_range": 46975.22,
-                "monetary_per_day": 34085.12
+                "monetary_per_day": 34085.12,
             }
         }
 
+
 class PredictionRequest(BaseModel):
     """Request model for prediction endpoint"""
+
     customer_id: str = Field(..., description="Customer identifier")
     features: CustomerFeatures
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -76,19 +82,23 @@ class PredictionRequest(BaseModel):
                     "product_diversity": 2.11,
                     "channel_diversity": 1.76,
                     "amount_range": 46975.22,
-                    "monetary_per_day": 34085.12
-                }
+                    "monetary_per_day": 34085.12,
+                },
             }
         }
 
+
 class PredictionResponse(BaseModel):
     """Response model for prediction endpoint"""
+
     customer_id: str
-    risk_probability: float = Field(..., ge=0, le=1, description="Probability of being high risk (0-1)")
+    risk_probability: float = Field(
+        ..., ge=0, le=1, description="Probability of being high risk (0-1)"
+    )
     risk_score: int = Field(..., ge=300, le=850, description="Credit score (300-850)")
     risk_category: str = Field(..., description="Risk category: LOW, MEDIUM, or HIGH")
     recommendation: str = Field(..., description="Loan recommendation")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -96,12 +106,14 @@ class PredictionResponse(BaseModel):
                 "risk_probability": 0.15,
                 "risk_score": 750,
                 "risk_category": "LOW",
-                "recommendation": "APPROVE: Low risk customer with good credit history"
+                "recommendation": "APPROVE: Low risk customer with good credit history",
             }
         }
 
+
 class HealthResponse(BaseModel):
     """Health check response"""
+
     status: str
     model_loaded: bool
     model_type: Optional[str] = None

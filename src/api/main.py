@@ -17,7 +17,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import Pydantic models
 from api.pydantic_models import (
-    PredictionRequest, PredictionResponse, HealthResponse, CustomerFeatures
+    PredictionRequest,
+    PredictionResponse,
+    HealthResponse,
+    CustomerFeatures,
 )
 
 # Initialize FastAPI app
@@ -26,7 +29,7 @@ app = FastAPI(
     description="API for predicting credit risk using machine learning",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Add CORS middleware
@@ -42,35 +45,42 @@ app.add_middleware(
 model = None
 preprocessor = None
 
+
 def load_model():
     """Load the trained model and preprocessor"""
     global model, preprocessor
-    
+
     try:
-        model_path = os.path.join(os.path.dirname(__file__), '../../models/best_credit_risk_model.pkl')
-        preprocessor_path = os.path.join(os.path.dirname(__file__), '../../models/preprocessor.pkl')
-        
+        model_path = os.path.join(
+            os.path.dirname(__file__), "../../models/best_credit_risk_model.pkl"
+        )
+        preprocessor_path = os.path.join(
+            os.path.dirname(__file__), "../../models/preprocessor.pkl"
+        )
+
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found: {model_path}")
-        
+
         model = joblib.load(model_path)
         preprocessor = joblib.load(preprocessor_path)
-        
+
         print(f"✅ Model loaded: {type(model).__name__}")
         print(f"✅ Preprocessor loaded")
-        
+
         return True
     except Exception as e:
         print(f"❌ Error loading model: {e}")
         return False
 
+
 @app.on_event("startup")
 async def startup_event():
     """Load model on startup"""
-    print("="*60)
+    print("=" * 60)
     print("STARTING CREDIT RISK PREDICTION API")
-    print("="*60)
+    print("=" * 60)
     load_model()
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -79,8 +89,9 @@ async def root():
         "message": "Credit Risk Prediction API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health_check": "/health"
+        "health_check": "/health",
     }
+
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
@@ -90,14 +101,15 @@ async def health_check():
             status="healthy",
             model_loaded=True,
             model_type=type(model).__name__ if model else None,
-            message="API is running and model is loaded"
+            message="API is running and model is loaded",
         )
     else:
         return HealthResponse(
             status="unhealthy",
             model_loaded=False,
-            message="Model not loaded. Check model files."
+            message="Model not loaded. Check model files.",
         )
+
 
 def calculate_credit_score(risk_probability: float) -> int:
     """
@@ -108,14 +120,15 @@ def calculate_credit_score(risk_probability: float) -> int:
     base_score = 300
     max_score = 850
     score_range = max_score - base_score
-    
+
     # Invert and scale: (1 - risk) * range + base
     credit_score = int((1 - risk_probability) * score_range + base_score)
-    
+
     # Ensure within bounds
     credit_score = max(base_score, min(max_score, credit_score))
-    
+
     return credit_score
+
 
 def get_risk_category(risk_probability: float) -> str:
     """Categorize risk based on probability"""
@@ -125,6 +138,7 @@ def get_risk_category(risk_probability: float) -> str:
         return "MEDIUM"
     else:
         return "HIGH"
+
 
 def get_recommendation(risk_category: str, credit_score: int) -> str:
     """Generate loan recommendation based on risk and score"""
@@ -139,14 +153,15 @@ def get_recommendation(risk_category: str, credit_score: int) -> str:
     else:
         return "DECLINE: High risk customer"
 
+
 @app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
 async def predict(request: PredictionRequest):
     """
     Predict credit risk for a customer
-    
+
     - **customer_id**: Unique customer identifier
     - **features**: Customer transaction features
-    
+
     Returns risk probability, credit score, and recommendation
     """
     try:
@@ -155,39 +170,42 @@ async def predict(request: PredictionRequest):
             load_model()
             if model is None:
                 raise HTTPException(status_code=503, detail="Model not loaded")
-        
+
         # Convert features to DataFrame
         features_dict = request.features.dict()
         features_df = pd.DataFrame([features_dict])
-        
+
         # Make prediction
         risk_probability = model.predict_proba(features_df)[0, 1]
-        
+
         # Calculate credit score (300-850)
         credit_score = calculate_credit_score(risk_probability)
-        
+
         # Get risk category
         risk_category = get_risk_category(risk_probability)
-        
+
         # Get recommendation
         recommendation = get_recommendation(risk_category, credit_score)
-        
+
         # Create response
         response = PredictionResponse(
             customer_id=request.customer_id,
             risk_probability=round(risk_probability, 4),
             risk_score=credit_score,
             risk_category=risk_category,
-            recommendation=recommendation
+            recommendation=recommendation,
         )
-        
-        print(f"📊 Prediction for {request.customer_id}: "
-              f"Risk={risk_probability:.2%}, Score={credit_score}, Category={risk_category}")
-        
+
+        print(
+            f"📊 Prediction for {request.customer_id}: "
+            f"Risk={risk_probability:.2%}, Score={credit_score}, Category={risk_category}"
+        )
+
         return response
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+
 
 @app.post("/predict-batch", tags=["Prediction"])
 async def predict_batch(requests: List[PredictionRequest]):
@@ -199,44 +217,46 @@ async def predict_batch(requests: List[PredictionRequest]):
             load_model()
             if model is None:
                 raise HTTPException(status_code=503, detail="Model not loaded")
-        
+
         responses = []
         features_list = []
         customer_ids = []
-        
+
         # Collect all features and customer IDs
         for request in requests:
             features_dict = request.features.dict()
             features_list.append(features_dict)
             customer_ids.append(request.customer_id)
-        
+
         # Convert to DataFrame
         features_df = pd.DataFrame(features_list)
-        
+
         # Make batch predictions
         probabilities = model.predict_proba(features_df)[:, 1]
-        
+
         # Create responses
         for i, (customer_id, prob) in enumerate(zip(customer_ids, probabilities)):
             credit_score = calculate_credit_score(prob)
             risk_category = get_risk_category(prob)
             recommendation = get_recommendation(risk_category, credit_score)
-            
+
             response = PredictionResponse(
                 customer_id=customer_id,
                 risk_probability=round(prob, 4),
                 risk_score=credit_score,
                 risk_category=risk_category,
-                recommendation=recommendation
+                recommendation=recommendation,
             )
             responses.append(response.dict())
-        
+
         return {"predictions": responses, "count": len(responses)}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Batch prediction error: {str(e)}")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     print("🚀 Starting API server...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
